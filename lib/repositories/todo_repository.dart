@@ -3,14 +3,7 @@ import 'package:todo_objbox/database/objectbox_database.dart';
 import 'package:todo_objbox/models/todo.dart';
 
 class TodoRepository {
-  final ObjectBoxDatabase database;
-
-  TodoRepository(this.database);
-
-  Future<Box> getBox() async {
-    final store = await database.getStore();
-    return store.box<Todo>();
-  }
+  final db = ObjectBoxDatabase();
 
   Future<Todo> insert(String desc) async {
     Todo todo = Todo(desc: desc, completed: false);
@@ -19,10 +12,15 @@ class TodoRepository {
     return todo;
   }
 
+  Future<Box<Todo>> getBox() async {
+    final store = await db.getStore();
+    return store.box<Todo>();
+  }
+
   Future<List<Todo>> getAll() async {
     List<Todo> todos;
     final box = await getBox();
-    todos = box.getAll() as List<Todo>;
+    todos = box.getAll();
     return todos;
   }
 

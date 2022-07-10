@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:todo_objbox/cubits/filtered_todos/filtered_todos_cubit.dart';
+import 'package:todo_objbox/cubits/search_todos/search_todos_cubit.dart';
 import 'package:todo_objbox/cubits/todo_filter/todo_filter_cubit.dart';
 import 'package:todo_objbox/cubits/todo_list/todo_list_cubit.dart';
-import 'package:todo_objbox/database/objectbox_database.dart';
 import 'package:todo_objbox/pages/home_page.dart';
 import 'package:todo_objbox/repositories/todo_repository.dart';
 
@@ -17,7 +17,7 @@ class TodoObjBoxApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepositoryProvider(
-      create: (context) => TodoRepository(ObjectBoxDatabase()),
+      create: (context) => TodoRepository(),
       child: MultiBlocProvider(
         providers: [
           BlocProvider<TodoListCubit>(
@@ -25,6 +25,9 @@ class TodoObjBoxApp extends StatelessWidget {
           ),
           BlocProvider<TodoFilterCubit>(
             create: (context) => TodoFilterCubit(),
+          ),
+          BlocProvider<SearchTodosCubit>(
+            create: (context) => SearchTodosCubit(),
           ),
           BlocProvider<FilteredTodosCubit>(
             create: (context) => FilteredTodosCubit(

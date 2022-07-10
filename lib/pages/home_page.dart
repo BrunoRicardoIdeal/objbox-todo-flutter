@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:todo_objbox/cubits/filtered_todos/filtered_todos_cubit.dart';
+import 'package:todo_objbox/cubits/search_todos/search_todos_cubit.dart';
 import 'package:todo_objbox/cubits/todo_filter/todo_filter_cubit.dart';
 import 'package:todo_objbox/cubits/todo_list/todo_list_cubit.dart';
-import 'package:todo_objbox/models/todo.dart';
 import 'package:todo_objbox/widget.dart/todo_item.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _snackBarVisible = false;
+  bool _searchVisible = false;
   bool _absorbing = false;
   final _newTodoController = TextEditingController();
   final GlobalKey<FormState> _formSnackKey = GlobalKey<FormState>();
@@ -102,6 +103,17 @@ class _HomePageState extends State<HomePage> {
     final notCompletedOnly =
         context.watch<TodoFilterCubit>().state.notCompletedOnly;
 
+    final searchWidget = Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: TextField(
+          onChanged: (value) =>
+              context.read<SearchTodosCubit>().setSearchTerm(value),
+          decoration: const InputDecoration(
+            labelText: 'Search todos',
+            prefixIcon: Icon(Icons.search),
+          ),
+        ));
+
     return WillPopScope(
       onWillPop: () async {
         if (_snackBarVisible) {
@@ -115,11 +127,29 @@ class _HomePageState extends State<HomePage> {
           title: const Text('ObjBox TODO'),
           actions: [
             IconButton(
-                onPressed: () {
-                  context.read<TodoFilterCubit>().toggleNotCompletedOnly();
-                },
-                icon: Icon(
-                    notCompletedOnly ? Icons.filter_alt_off : Icons.filter_alt))
+              onPressed: () {
+                setState(() {
+                  if (_snackBarVisible) {
+                    _dismissSnackbar();
+                    return;
+                  }
+                  _searchVisible = !_searchVisible;
+                });
+              },
+              icon: Icon(
+                  _searchVisible ? Icons.search_off_rounded : Icons.search),
+            ),
+            IconButton(
+              onPressed: () {
+                if (_snackBarVisible) {
+                  _dismissSnackbar();
+                  return;
+                }
+                context.read<TodoFilterCubit>().toggleNotCompletedOnly();
+              },
+              icon: Icon(
+                  notCompletedOnly ? Icons.filter_alt_off : Icons.filter_alt),
+            ),
           ],
         ),
         floatingActionButton: _snackBarVisible
@@ -148,32 +178,53 @@ class _HomePageState extends State<HomePage> {
                     listener: (context, state) {
                   context.read<FilteredTodosCubit>().setFilteredTodos(
                       context.read<TodoFilterCubit>().state.notCompletedOnly,
+                      context.read<SearchTodosCubit>().state.searchTerm,
                       state.todos);
+                }),
+                BlocListener<SearchTodosCubit, SearchTodosState>(
+                    listener: (context, state) {
+                  context.read<FilteredTodosCubit>().setFilteredTodos(
+                      context.read<TodoFilterCubit>().state.notCompletedOnly,
+                      state.searchTerm,
+                      context.read<TodoListCubit>().state.todos);
                 }),
                 BlocListener<TodoFilterCubit, TodoFilterState>(
                     listener: (context, state) {
                   context.read<FilteredTodosCubit>().setFilteredTodos(
                       context.read<TodoFilterCubit>().state.notCompletedOnly,
+                      context.read<SearchTodosCubit>().state.searchTerm,
                       context.read<TodoListCubit>().state.todos);
                 }),
               ],
-              child: ListView.builder(
-                itemCount: todos.length,
-                itemBuilder: (context, index) {
-                  return Dismissible(
-                    key: ValueKey(todos[index].id),
-                    background: Container(
-                      color: Colors.red,
+              child: Column(
+                children: [
+                  _searchVisible ? searchWidget : Container(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: context.read<TodoListCubit>().init,
+                      child: ListView.builder(
+                        itemCount: todos.length,
+                        itemBuilder: (context, index) {
+                          return Dismissible(
+                            key: ValueKey(todos[index].id),
+                            background: Container(
+                              color: Colors.red,
+                            ),
+                            secondaryBackground: Container(
+                              color: Colors.red,
+                            ),
+                            onDismissed: (direction) {
+                              context
+                                  .read<TodoListCubit>()
+                                  .removeTodo(todos[index].id);
+                            },
+                            child: TodoItem(todo: todos[index]),
+                          );
+                        },
+                      ),
                     ),
-                    secondaryBackground: Container(
-                      color: Colors.red,
-                    ),
-                    onDismissed: (direction) {
-                      context.read<TodoListCubit>().removeTodo(todos[index].id);
-                    },
-                    child: TodoItem(todo: todos[index]),
-                  );
-                },
+                  ),
+                ],
               ),
             ),
           ),
